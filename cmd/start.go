@@ -1,35 +1,39 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/Killayt/LoadMusic-bot/bot"
 )
 
 func main() {
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("MUSICAL_LOAD_BOT"))
+	token := os.Getenv("MUSICAL_LOAD_BOT")
+	b, err := bot.NewTelegramBot(
+		token,
+		6000,           // max download time
+		120,            // max video duration
+		"Musical Load", // bot name
+	)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
-	bot.Debug = true
+	sigint := make(chan os.Signal)
+	signal.Notify(sigint, syscall.SIGTERM)
+	signal.Notify(sigint, syscall.SIGINT)
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	go func() {
+		<-sigint
+		fmt.Println("Gracefully stopping app")
+		b.Stop()
+		os.Exit(1)
+	}()
 
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates := bot.GetUpdatesChan(u)
-
-	for update := range updates {
-		if update.Message != nil { // If we got a message
-			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-			msg.ReplyToMessageID = update.Message.MessageID
-
-			bot.Send(msg)
-		}
+	if err := b.Run(true); err != nil {
+		fmt.Println(err.Error())
 	}
 }

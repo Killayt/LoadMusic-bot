@@ -26,7 +26,7 @@ type Downloader struct {
 	r *regexp.Regexp
 }
 
-func AcceptDownloader(maxVideoDuration int32) (*Downloader, error) {
+func AcceptDownloader(maxVideoDuration int64) (*Downloader, error) {
 	r, err := regexp.Compile(expression)
 	if err != nil {
 		return nil, err
